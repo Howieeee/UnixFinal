@@ -37,6 +37,8 @@ int main()
 	bool first = false;
 	char buf[2000];
 	string orign_dir;//directory
+	string home_dir;
+	int thehome = 0;
 	string str1;//input string
 
 	execution exec;//save CMD and ARGV
@@ -51,8 +53,14 @@ int main()
 		if(first){
 			orign_dir.push_back('/');
 			orign_dir += value;
+			if(thehome < 2){
+				home_dir.push_back('/');
+				home_dir += value;
+				thehome++;
+			}
 		}
 		else first = true;
+		
 	}
 	ss.clear();
 
@@ -99,19 +107,24 @@ int main()
 			break;
 		}
 		else {
-			if (exec.cmd == "cd" && exec.argv.size() > 0) {// when CMD = cd
-				string change_index = exec.argv[0];
-				if(change_index == ".."){
-					if(orign_dir.size() > 0)
-						getdir(change_index, orign_dir, 1);
-				}
-				else if (change_index[0] == '/') 
-				{
-					getdir(change_index, orign_dir, 2);
+			if (exec.cmd == "cd" /*&& exec.argv.size() > 0*/) {// when CMD = cd
+				if(exec.argv.size() > 0){
+					string change_index = exec.argv[0];
+					if(change_index == ".."){
+						if(orign_dir.size() > 0)
+							getdir(change_index, orign_dir, 1);
+					}
+					else if (change_index[0] == '/') 
+					{
+						getdir(change_index, orign_dir, 2);
 					
+					}
+					else
+						getdir(change_index, orign_dir, 3);
 				}
-				else
-					getdir(change_index, orign_dir, 3);
+				else{
+					getdir( home_dir, orign_dir, 2);
+				}
 			}
 			else if(isrd(exec)){//when exit < or >
 				dord(exec);
