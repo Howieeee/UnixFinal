@@ -361,32 +361,41 @@ void write_pipe(vector<string> p, int fd[][2], int pipe_num)
 
 void dord(execution exec)
 {
-	int rdtype;
+	string rdtype;
 	vector<string> p;
+	string filename_in = "", filename_out = "", filename_out2 = "";
 	p.push_back(exec.cmd);
+	execution newexec;
+	newexec.cmd = exec.cmd;
 	for(int i = 0; i < exec.argv.size(); i++){
-		if(exec.argv[i] == ">") rdtype = 1;
-		else if(exec.argv[i] == "<") rdtype = 2;	
-		p.push_back(exec.argv[i]);
+		if(exec.argv[i] == ">"){
+			rdtype = ">";
+			filename_out = exec.argv[++i];
+		}
+		else if(exec.argv[i] == "<"){
+			rdtype = "<";
+			filename_in = exec.argv[++i];
+
+		}
+		else if(exec.argv[i] == ">>"){
+			rdtype = ">>";
+			filename_out2 = exec.argv[++i];
+		}
+		else{
+			p.push_back(exec.argv[i]);
+			newexec.argv.push_back(exec.argv[i]);
+		}
 	}
-	rd_out(p, exec);//deal with cmd (we don't know there are pipe or not)
+	rd_out(p, newexec, filename_in, filename_out, filename_out2);//deal with cmd (we don't know there are pipe or not)
 }
 
-void rd_out(vector<string> p, execution exec)// do redirect
+void rd_out(vector<string> p, execution exec, string filename_in, string filename_out, string filename_out2)// do redirect
 {
-	int i, j, fd, defout, thepipe = 0, pipe_count = 0, defin;
+	int i = 0, j, fd, fd1, defout, thepipe = 0, pipe_count = 0, defin;
 	int pipefd[50][2];
 	string file = "";
 	vector<string> str;
 	char* buf[100];
-	for( i = 0; i < p.size(); i++)
-		if(p[i] == ">" || p[i] == "<" || p[i] == ">>") break;
-	j = i;
-	string two_type = p[i];
-	for( i++; i < p.size(); i++)
-		file = file + p[i];
-	p.resize(j);
-
 	for(int i = 0; i < exec.argv.size(); i++){
 		if(exec.argv[i] == "|")
 			pipe_count++;
@@ -397,24 +406,24 @@ void rd_out(vector<string> p, execution exec)// do redirect
 		exit(0);
 	}
 	defin = dup(0);
-	if(two_type == ">"){
-		if((fd = open((char*)file.c_str(), O_RDWR | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR)) < 0){//create a file no matter it is exist or not
+	if(filename_out != ""){
+		if((fd = open((char*)filename_out.c_str(), O_RDWR | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR)) < 0){//create a file no matter it is exist or not
 			cerr << "can't open the file" << endl;
 			exit(0);
 		}
 		dup2(fd, 1);
 		close(fd);
 	}
-	else if(two_type == ">>"){
-		if((fd = open((char*)file.c_str(), O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR)) < 0){//create a file no matter it is exist or not
+	else if(filename_out2 != ""){
+		if((fd = open((char*)filename_out2.c_str(), O_RDWR | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR)) < 0){//create a file no matter it is exist or not
 			cerr << "can't open the file" << endl;
 			exit(0);
 		}
 		dup2(fd, 1);
 		close(fd);
 	}
-	else{
-		fd = open((char*)file.c_str(), O_RDWR, S_IRUSR | S_IWUSR);//open an exist file
+	if(filename_in != ""){
+		fd = open((char*)filename_in.c_str(), O_RDWR, S_IRUSR | S_IWUSR);//open an exist file
 		dup2(fd, 0);
 		close(fd);
 	}
@@ -448,8 +457,7 @@ void rd_out(vector<string> p, execution exec)// do redirect
 						close(pipefd[thepipe - 1][0]);
 						close(pipefd[thepipe - 1][1]);
 						wait(NULL);
-
-					}
+						}
 					thepipe++;
 					str.clear();
 				}
@@ -463,21 +471,21 @@ void rd_out(vector<string> p, execution exec)// do redirect
 			if(fork() == 0){
 				execvp(buf[0], buf);
 			}
-		
+	
 			wait(NULL);
 		}
 	}
-	if(two_type == ">"){//recover to the default stdout
+	if(filename_out != ""){//recover to the default stdout
 		fflush(stdout);
 		dup2(defout,1);
 		close(defout);
 	}
-	else if(two_type == ">>"){
+	else if(filename_out != ""){
 		fflush(stdout);
 		dup2(defout,1);
 		close(defout);
 	}
-	else{// recover to the default stdin
+	if(filename_in != ""){// recover to the default stdin
 		fflush(stdin);
 		dup2(defin, 0);
 		close(defin);
