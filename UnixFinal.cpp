@@ -480,7 +480,7 @@ void rd_out(vector<string> p, execution exec, string filename_in, string filenam
 		dup2(defout,1);
 		close(defout);
 	}
-	else if(filename_out != ""){
+	else if(filename_out2 != ""){
 		fflush(stdout);
 		dup2(defout,1);
 		close(defout);
